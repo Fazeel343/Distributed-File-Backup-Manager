@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backup Manager Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0a0c10;
+    --bg2:      #111318;
+    --bg3:      #181c24;
+    --border:   #1e2330;
+    --accent:   #00e5ff;
+    --green:    #00ff88;
+    --yellow:   #ffd600;
+    --red:      #ff4466;
+    --purple:   #b388ff;
+    --muted:    #4a5568;
+    --text:     #e2e8f0;
+    --text2:    #8892a4;
+    --font-ui:  'Syne', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* animated grid bg */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1300px; margin: 0 auto; padding: 24px; }
+
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: linear-gradient(135deg, #00e5ff22, #00e5ff44);
+    border: 1px solid #00e5ff55;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .brand-text h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+  .brand-text p  { font-size: 12px; color: var(--text2); font-family: var(--font-mono); margin-top: 2px; }
+
+  .live-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: #00ff8811; border: 1px solid #00ff8833;
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; color: var(--green);
+    font-family: var(--font-mono);
+  }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Stat cards ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); border-color: #2a3040; }
+  .stat-card::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    border-radius: 14px 14px 0 0;
+  }
+  .stat-card.pending::after  { background: var(--accent); }
+  .stat-card.inprog::after   { background: var(--yellow); }
+  .stat-card.done::after     { background: var(--green); }
+  .stat-card.failed::after   { background: var(--red); }
+  .stat-card.skipped::after  { background: var(--purple); }
+  .stat-card.queue::after    { background: var(--accent); }
+  .stat-card.writes::after   { background: var(--green); }
+  .stat-card.retries::after  { background: var(--red); }
+
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 8px; font-weight: 600; }
+  .stat-val   { font-size: 36px; font-weight: 800; font-family: var(--font-mono); line-height: 1; }
+  .stat-card.pending .stat-val  { color: var(--accent); }
+  .stat-card.inprog .stat-val   { color: var(--yellow); }
+  .stat-card.done .stat-val     { color: var(--green); }
+  .stat-card.failed .stat-val   { color: var(--red); }
+  .stat-card.skipped .stat-val  { color: var(--purple); }
+  .stat-card.queue .stat-val    { color: var(--accent); }
+  .stat-card.writes .stat-val   { color: var(--green); }
+  .stat-card.retries .stat-val  { color: var(--red); }
+
+  /* ── Two-column layout ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* ── Panel ── */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+  .panel-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); }
+  .panel-count { font-family: var(--font-mono); font-size: 12px; color: var(--text2); background: var(--bg); padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); }
+
+  /* ── File table ── */
+  .file-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; max-height: 540px; overflow-y: auto; }
+  .file-list::-webkit-scrollbar { width: 4px; }
+  .file-list::-webkit-scrollbar-track { background: var(--bg); }
+  .file-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .file-row {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+    transition: border-color 0.2s;
+  }
+  .file-row:hover { border-color: #2a3040; }
+  .file-row.status-in_progress { border-color: #ffd60033; }
+  .file-row.status-done        { border-color: #00ff8822; }
+  .file-row.status-failed      { border-color: #ff446633; }
+  .file-row.status-skipped     { border-color: #b388ff33; }
+
+  .file-name  { font-family: var(--font-mono); font-size: 13px; color: var(--text); margin-bottom: 6px; }
+  .file-meta  { font-size: 11px; color: var(--text2); display: flex; gap: 12px; margin-bottom: 8px; }
+  .file-meta span { display: flex; align-items: center; gap: 4px; }
+
+  .progress-track {
+    height: 5px; background: var(--bg); border-radius: 99px; overflow: hidden; margin-top: 4px;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+  .status-pending     .progress-fill { background: var(--accent); }
+  .status-in_progress .progress-fill { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .status-done        .progress-fill { background: var(--green); }
+  .status-failed      .progress-fill { background: var(--red); }
+  .status-skipped     .progress-fill { background: var(--purple); }
+
+  .status-badge {
+    font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+  }
+  .badge-pending     { color: var(--accent);  background: #00e5ff15; border: 1px solid #00e5ff33; }
+  .badge-in_progress { color: var(--yellow);  background: #ffd60015; border: 1px solid #ffd60033; }
+  .badge-done        { color: var(--green);   background: #00ff8815; border: 1px solid #00ff8833; }
+  .badge-failed      { color: var(--red);     background: #ff446615; border: 1px solid #ff446633; }
+  .badge-skipped     { color: var(--purple);  background: #b388ff15; border: 1px solid #b388ff33; }
+
+  /* ── Log panel ── */
+  .log-list { padding: 12px; display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .log-list::-webkit-scrollbar { width: 4px; }
+  .log-list::-webkit-scrollbar-track { background: var(--bg); }
+  .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .log-entry {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text2); padding: 6px 10px;
+    background: var(--bg3); border-radius: 6px;
+    border-left: 2px solid var(--border);
+    line-height: 1.5;
+    animation: fadeIn 0.3s ease;
+  }
+  .log-entry.log-fail  { border-left-color: var(--red);    color: #ff8899; }
+  .log-entry.log-done  { border-left-color: var(--green);  color: #88ffbb; }
+  .log-entry.log-skip  { border-left-color: var(--purple); color: #ccaaff; }
+  .log-entry.log-reg   { border-left-color: var(--accent); }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+  /* ── Overall progress bar ── */
+  .overall-bar-wrap {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px 24px; margin-bottom: 20px;
+  }
+  .overall-bar-label { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
+  .overall-bar-label span:first-child { color: var(--text2); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .overall-bar-label span:last-child  { font-family: var(--font-mono); font-size: 13px; color: var(--text); }
+  .overall-track { height: 10px; background: var(--bg); border-radius: 99px; overflow: hidden; display: flex; }
+  .seg { height: 100%; transition: width 0.5s ease; }
+  .seg-done    { background: var(--green); }
+  .seg-inprog  { background: var(--yellow); }
+  .seg-failed  { background: var(--red); }
+  .seg-skipped { background: var(--purple); }
+
+  /* ── Client activity ── */
+  .client-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+  .client-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; text-align: center;
+  }
+  .client-num { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 6px; font-weight: 600; }
+  .client-done { font-size: 24px; font-weight: 800; font-family: var(--font-mono); color: var(--green); }
+  .client-total { font-size: 12px; color: var(--text2); font-family: var(--font-mono); }
+
+  /* ── Connection error ── */
+  #error-banner {
+    display: none;
+    background: #ff446615; border: 1px solid #ff446644;
+    color: var(--red); font-size: 13px; font-family: var(--font-mono);
+    padding: 12px 20px; border-radius: 10px; margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* ── Empty state ── */
+  .empty { text-align: center; padding: 48px 20px; color: var(--text2); font-size: 13px; }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* scrollbar for whole page */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">💾</div>
+      <div class="brand-text">
+        <h1>Backup Manager</h1>
+        <p>localhost:8765 · polling every 800ms</p>
+      </div>
+    </div>
+    <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+  </header>
+
+  <div id="error-banner">⚠ Cannot reach backend — make sure ./backup_manager is running</div>
+
+  <!-- Overall progress -->
+  <div class="overall-bar-wrap">
+    <div class="overall-bar-label">
+      <span>Overall Progress</span>
+      <span id="overall-pct">0%</span>
+    </div>
+    <div class="overall-track">
+      <div class="seg seg-done"    id="seg-done"    style="width:0%"></div>
+      <div class="seg seg-inprog"  id="seg-inprog"  style="width:0%"></div>
+      <div class="seg seg-failed"  id="seg-failed"  style="width:0%"></div>
+      <div class="seg seg-skipped" id="seg-skipped" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Client cards -->
+  <div class="client-grid" id="client-grid">
+    <div class="client-card"><div class="client-num">Client 1</div><div class="client-done" id="c1-done">0</div><div class="client-total">/ 5 files</div></div>
+    <div class="client-card"><div class="client-num">Client 2</div><div class="client-done" id="c2-done">0</div><div class="client-total">/ 5 files</div></div>
+    <div class="client-card"><div class="client-num">Client 3</div><div class="client-done" id="c3-done">0</div><div class="client-total">/ 5 files</div></div>
+    <div class="client-card"><div class="client-num">Client 4</div><div class="client-done" id="c4-done">0</div><div class="client-total">/ 5 files</div></div>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stats-grid">
+    <div class="stat-card pending"> <div class="stat-label">Pending</div>  <div class="stat-val" id="s-pending">0</div></div>
+    <div class="stat-card inprog">  <div class="stat-label">In Progress</div><div class="stat-val" id="s-inprog">0</div></div>
+    <div class="stat-card done">    <div class="stat-label">Done</div>     <div class="stat-val" id="s-done">0</div></div>
+    <div class="stat-card failed">  <div class="stat-label">Failed</div>   <div class="stat-val" id="s-failed">0</div></div>
+    <div class="stat-card skipped"> <div class="stat-label">Skipped</div>  <div class="stat-val" id="s-skipped">0</div></div>
+    <div class="stat-card queue">   <div class="stat-label">Queue Size</div><div class="stat-val" id="s-queue">0</div></div>
+    <div class="stat-card writes">  <div class="stat-label">Disk Writes</div><div class="stat-val" id="s-writes">0</div></div>
+    <div class="stat-card retries"> <div class="stat-label">Retries</div>  <div class="stat-val" id="s-retries">0</div></div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main-grid">
+    <!-- File list -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">File Requests</span>
+        <span class="panel-count" id="file-count">0 files</span>
+      </div>
+      <div class="file-list" id="file-list">
+        <div class="empty"><div class="empty-icon">📂</div>Waiting for backup requests...</div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Event Log</span>
+      </div>
+      <div class="log-list" id="log-list">
+        <div class="empty"><div class="empty-icon">📋</div>No events yet</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost:8765/api/status';
+
+function pct(n, total) { return total > 0 ? Math.round(n / total * 100) : 0; }
+
+function renderFiles(requests) {
+  const el = document.getElementById('file-list');
+  if (!requests || requests.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📂</div>Waiting for backup requests...</div>';
+    document.getElementById('file-count').textContent = '0 files';
+    return;
+  }
+
+  // sort: in_progress first, then pending, then done/skipped/failed
+  const order = { in_progress:0, pending:1, done:2, skipped:3, failed:4 };
+  requests.sort((a,b) => (order[a.status]??5) - (order[b.status]??5));
+
+  document.getElementById('file-count').textContent = requests.length + ' files';
+
+  el.innerHTML = requests.map(r => {
+    const prog = pct(r.chunks_done, r.total_chunks);
+    const retryBadge = r.retry_count > 0
+      ? `<span style="color:var(--red)">↺ ${r.retry_count}</span>` : '';
+    const incBadge = r.incremental
+      ? `<span style="color:var(--purple)">△ incr</span>` : `<span>■ full</span>`;
+    return `
+      <div class="file-row status-${r.status}">
+        <div>
+          <div class="file-name">${r.file_name}</div>
+          <div class="file-meta">
+            <span>Client ${r.client_id}</span>
+            <span>${r.chunks_done}/${r.total_chunks} chunks</span>
+            ${incBadge}
+            ${retryBadge}
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:${prog}%"></div>
+          </div>
+        </div>
+        <div>
+          <div class="status-badge badge-${r.status}">${r.status.replace('_',' ')}</div>
+          <div style="text-align:center;font-family:var(--font-mono);font-size:11px;color:var(--text2);margin-top:6px">${prog}%</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderLog(log) {
+  const el = document.getElementById('log-list');
+  if (!log || log.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>No events yet</div>';
+    return;
+  }
+  el.innerHTML = [...log].reverse().map(entry => {
+    let cls = 'log-reg';
+    if (entry.includes('failed') || entry.includes('FAIL') || entry.includes('exceeded')) cls = 'log-fail';
+    else if (entry.includes('done') || entry.includes('DONE')) cls = 'log-done';
+    else if (entry.includes('skipped') || entry.includes('SKIP')) cls = 'log-skip';
+    return `<div class="log-entry ${cls}">${entry}</div>`;
+  }).join('');
+}
+
+function renderClientCards(requests) {
+  for (let i = 1; i <= 4; i++) {
+    const clientFiles = (requests || []).filter(r => r.client_id === i);
+    const done = clientFiles.filter(r => r.status === 'done' || r.status === 'skipped').length;
+    document.getElementById(`c${i}-done`).textContent = done;
+  }
+}
+
+function renderOverall(data) {
+  const total = (data.pending||0)+(data.in_progress||0)+(data.done||0)+(data.failed||0)+(data.skipped||0);
+  if (total === 0) return;
+  const dPct = pct(data.done, total);
+  const iPct = pct(data.in_progress, total);
+  const fPct = pct(data.failed, total);
+  const sPct = pct(data.skipped, total);
+  document.getElementById('seg-done').style.width    = dPct + '%';
+  document.getElementById('seg-inprog').style.width  = iPct + '%';
+  document.getElementById('seg-failed').style.width  = fPct + '%';
+  document.getElementById('seg-skipped').style.width = sPct + '%';
+  const settled = data.done + data.failed + data.skipped;
+  document.getElementById('overall-pct').textContent = pct(settled, total) + '%';
+}
+
+async function poll() {
+  try {
+    const res  = await fetch(API, { cache: 'no-store' });
+    const data = await res.json();
+    document.getElementById('error-banner').style.display = 'none';
+
+    document.getElementById('s-pending').textContent  = data.pending     ?? 0;
+    document.getElementById('s-inprog').textContent   = data.in_progress ?? 0;
+    document.getElementById('s-done').textContent     = data.done        ?? 0;
+    document.getElementById('s-failed').textContent   = data.failed      ?? 0;
+    document.getElementById('s-skipped').textContent  = data.skipped     ?? 0;
+    document.getElementById('s-queue').textContent    = data.queue_size  ?? 0;
+    document.getElementById('s-writes').textContent   = data.total_writes ?? 0;
+    document.getElementById('s-retries').textContent  = data.total_retries ?? 0;
+
+    renderOverall(data);
+    renderFiles(data.requests);
+    renderLog(data.log);
+    renderClientCards(data.requests);
+  } catch (e) {
+    document.getElementById('error-banner').style.display = 'block';
+  }
+}
+
+poll();
+setInterval(poll, 800);
+</script>
+</body>
+</html>

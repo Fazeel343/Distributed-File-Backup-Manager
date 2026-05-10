@@ -1,0 +1,11 @@
+sudo apt update
+sudo apt install g++ -y
+
+
+g++ -std=c++17 -pthread -o backup_manager \
+    main.cpp client.cpp worker.cpp \
+    metadata_manager.cpp storage_controller.cpp \
+    recovery.cpp request_queue.cpp
+    
+    
+    ./backup_manager
