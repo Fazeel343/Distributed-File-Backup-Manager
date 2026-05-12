@@ -33,22 +33,22 @@ BACKUP_MANAGER
 
 ## 🏗️ System Architecture
 The project is built with a modular structure to enforce separation of concerns:
-- **main.cpp**: Entry point and system initialization. [cite: 47]
-- **request_queue**: Handles thread-safe communication between clients and workers. [cite: 47]
-- **metadata_manager**: Manages backup logs and record consistency. [cite: 47]
-- **storage_controller**: Regulates physical I/O using semaphores. [cite: 47]
-- **gui_dashboard**: Serves the real-time monitoring interface. [cite: 47]
+- **main.cpp**: Entry point and system initialization.
+- **request_queue**: Handles thread-safe communication between clients and workers.
+- **metadata_manager**: Manages backup logs and record consistency.
+- **storage_controller**: Regulates physical I/O using semaphores.
+- **gui_dashboard**: Serves the real-time monitoring interface. 
 
 ## 💻 Tech Stack
-- **Language:** C++17 [cite: 92]
-- **Libraries:** Standard Template Library (Threads, Mutex, Condition Variables, Semaphores) [cite: 93]
-- **Frontend:** HTML5 & JavaScript (for the dashboard) [cite: 95]
-- **Build System:** g++ / Makefile [cite: 97]
+- **Language:** C++17
+- **Libraries:** Standard Template Library (Threads, Mutex, Condition Variables, Semaphores)
+- **Frontend:** HTML5 & JavaScript (for the dashboard)
+- **Build System:** g++ / Makefile
 
 ## 📝 Operating Systems Concepts Applied
-- Multithreading & Process Coordination [cite: 81]
-- Mutual Exclusion (Mutexes) [cite: 83]
-- Semaphores for Resource Allocation [cite: 84]
-- Condition Variables for Thread Signaling [cite: 85]
+- Multithreading & Process Coordination
+- Mutual Exclusion (Mutexes)
+- Semaphores for Resource Allocation
+- Condition Variables for Thread Signaling 
 - Producer-Consumer Design Pattern [cite: 86]
 - Critical Section Management [cite: 87]
